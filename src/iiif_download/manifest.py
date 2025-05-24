@@ -214,6 +214,8 @@ class IIIFManifest:
                     save_dir=self.save_dir,
                     prefix=self._prefix,
                     leading_zeros=self._leading_zeros,
+                    mod_config=self.config,
+
                 )
             )
         return images

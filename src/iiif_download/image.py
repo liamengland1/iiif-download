@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from PIL import Image as PILgrimage
 
-from .config import config
+from .config import config, Config
 from .utils import async_request, get_size, sanitize_url, write_chunks
 from .utils.logger import logger
 
@@ -24,7 +24,10 @@ class IIIFImage:
         leading_zeros: int = 4,
         max_dim: Optional[int] = None,
         min_dim: Optional[int] = None,
+        pct_size: Optional[float] = None,
+        mod_config: Optional[Config] = None,
     ):
+ 
         self.idx = idx
         self.url = sanitize_url(img_id.replace("full/full/0/default.jpg", ""))
 
@@ -32,14 +35,22 @@ class IIIFImage:
         self.img_name = f"{prefix}{format(self.idx, f'0{leading_zeros}d')}.jpg"
         self.save_dir = save_dir
 
-        self.max_dim = max_dim or config.max_size
-        self.min_dim = min_dim or config.min_size
+        if mod_config:
+            self.max_dim = max_dim or mod_config.max_size
+            self.min_dim = min_dim or mod_config.min_size
+            self.pct_size = pct_size or mod_config.pct_size
+        else:
+            self.max_dim = max_dim or config.max_size
+            self.min_dim = min_dim or config.min_size
+            self.pct_size = pct_size or config.pct_size
+
         self.size = None
         self.height = self.get_height()
         self.width = self.get_width()
 
         self.allow_truncation = config.allow_truncation
         self.sleep = config.get_sleep_time(self.url)
+        # logger.log("Tomfoolery")
 
     @property
     def img_path(self) -> Path:
@@ -72,6 +83,7 @@ class IIIFImage:
     async def download(self, url=None) -> bool:
         """Download and save the image using configured settings."""
         url = url or self.sized_url()
+        # logger.log(f"Downloading {url}")
         time.sleep(self.sleep)
 
         try:
@@ -107,7 +119,17 @@ class IIIFImage:
             self.download_fail(f"⛔️ Failed to process image response {self.sized_url()}", e)
             return False
 
+    def get_pct_size(self) -> str:
+        # https://dlg.usg.edu/images/iiif/2/dlg%2Fguan%2F1633%2Fguan_1633_040-017%2Fguan_1633_040-017-00001.jp2/full/pct:35/0/default.jpg
+
+        pct_string = f"pct:{round(self.pct_size * 100)}"
+        return f"{pct_string}"
+
     def get_max_size(self) -> str:
+        # logger.log(f"pct size in get_max_size: {self.pct_size}")
+        if self.pct_size:
+            return self.get_pct_size()
+
         if self.max_dim is None:
             return "full"
 

@@ -22,8 +22,11 @@ class Config:
         self._log_dir = self._base_dir / "log"
 
         # Image processing settings
-        self._max_size = 2500
-        self._min_size = 1000
+        # self._max_size = 2500
+        # self._min_size = 1000
+        self._max_size = None
+        self._min_size = None
+        self._pct_size = None  # 100 percent
         self._max_res = 300
         self._allow_truncation = False
 
@@ -177,6 +180,24 @@ class Config:
         if value < 0:
             raise ValueError("max_res must be positive")
         self._max_res = value
+
+    @property
+    def pct_size(self) -> float:
+        """Percentage size for image dimensions."""
+        # print(f"Config instance in pct_size getter: {id(self)}")
+        return self._pct_size
+
+    @pct_size.setter
+    def pct_size(self, value):
+        if not isinstance(value, (int, float)):
+            print(f"pct_size must be a number: {value}")
+            raise TypeError("pct_size must be a number")
+        if value <= 0 or value > 1:
+            print(f"pct_size must be a percentage represented as a decimal (0-1): {value}")
+            raise ValueError("pct_size must be a percentage represented as a decimal (0-1). E.g., 0.35 for 35%)")
+        # print(f"pct_size set in config.py: {value}")
+        # print(f"Config instance in pct_size setter: {id(self)}")
+        self._pct_size = value
 
     @property
     def retry_attempts(self) -> int:
