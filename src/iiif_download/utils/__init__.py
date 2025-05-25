@@ -336,6 +336,12 @@ def write_to_file(path: Path, content: str, mode: Optional[str] = "w"):
         f.write(content)
 
 
+async def write_to_file_async(path: Path, content: str, mode: Optional[str] = "a"):
+    """Asynchronous file writing using aiofiles."""
+    async with aiofiles.open(path, mode) as f:
+        await f.write(content)
+
+
 async def write_chunks(file_path, response):
     async with aiofiles.open(file_path, mode="wb") as file:
         async for chunk in response.content.iter_chunked(8192):

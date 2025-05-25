@@ -16,6 +16,7 @@ from .utils import (
     get_meta_value,
     mono_val,
     sanitize_str,
+    write_to_file_async,
 )
 from .utils.logger import logger
 
@@ -250,14 +251,18 @@ class IIIFManifest:
             self.save_log()
             return self
 
-        logger.info(f"Downloading {len(images)} images from {self.url} inside {self.save_dir}")
+        # logger.info(f"Downloading {len(images)} images from {self.url} inside {self.save_dir}")
+        await write_to_file_async(self.save_dir / "events.log", f"imgtotal:{len(images)}\n")
+        await write_to_file_async(self.save_dir / "events.log", f"manifest:{self.url}\n")
 
         async def process_image(image):
             if self.config.debug and image.idx > 6:
                 return None  # skip extra images in debug mode
 
             success = await image.save()
-            if not success:
+            if success:
+                await write_to_file_async(self.save_dir / "events.log", "imgdownloaded:\n")
+            elif not success:
                 logger.error(f"Failed to download image #{image.idx} ({image.sized_url()})")
                 return None
 
@@ -269,7 +274,9 @@ class IIIFManifest:
             start = time.time()
             await asyncio.gather(*(process_image(img) for img in images))
             elapsed = time.time() - start
-            logger.info(f"Downloaded all images in {elapsed:.2f} seconds.")
+            await write_to_file_async(self.save_dir / "events.log", f"imgdlcomplete: {elapsed:.2f}\n")
+            await write_to_file_async(self.save_dir / "events.log", "END---\n")
+            # logger.info(f"Downloaded all images in {elapsed:.2f} seconds.")
             self.save_log()
         finally:
             if cleanup:
