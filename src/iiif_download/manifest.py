@@ -2,6 +2,7 @@ import asyncio
 import gc
 import json
 from pathlib import Path
+import time
 from typing import Any, Dict, List, Optional, Union
 from urllib.parse import unquote
 
@@ -224,54 +225,57 @@ class IIIFManifest:
         if self.config.is_logged:
             logger.add_to_json(self.save_dir / "info.json", self._manifest_info)
 
-    def download(
+    async def download(
         self, save_dir: Optional[Union[Path, str]] = None, cleanup=False
-    ) -> Union[bool, "IIIFManifest"]:
+            ) -> Union[bool, "IIIFManifest"]:
         if save_dir:
             self.save_dir = save_dir
         if not self.save_dir.exists():
             create_dir(self.save_dir)
 
-        async def _async_download_manifest():
-            if self.config.is_logged:
-                self._manifest_info = {"url": self.url, "license": "", "images": {}}
+        if self.config.is_logged:
+            self._manifest_info = {"url": self.url, "license": "", "images": {}}
 
-            if not await self.load():
-                logger.warning(f"Unable to load json content of {self.url}")
-                self.save_log()
-                return self
-
-            if self.config.is_logged:
-                self._manifest_info["license"] = self.license
-
-            images = self.images
-            if not images:
-                logger.warning(f"No images found in manifest {self.url}")
-                self.save_log()
-                return self
-
-            logger.info(f"Downloading {len(images)} images from {self.url} inside {self.save_dir}")
-            for i, image in enumerate(logger.progress(images, desc="Downloading..."), start=1):
-                if self.config.debug and i > 6:
-                    break
-
-                success = await image.save()
-                if not success:
-                    logger.error(f"Failed to download image #{image.idx} ({image.sized_url()})")
-                    continue
-
-                if self.config.is_logged:
-                    self._manifest_info["images"][image.img_name] = image.sized_url()
-
+        if not await self.load():
+            logger.warning(f"Unable to load json content of {self.url}")
             self.save_log()
             return self
 
+        if self.config.is_logged:
+            self._manifest_info["license"] = self.license
+
+        images = self.images
+        if not images:
+            logger.warning(f"No images found in manifest {self.url}")
+            self.save_log()
+            return self
+
+        logger.info(f"Downloading {len(images)} images from {self.url} inside {self.save_dir}")
+
+        async def process_image(image):
+            if self.config.debug and image.idx > 6:
+                return None  # skip extra images in debug mode
+
+            success = await image.save()
+            if not success:
+                logger.error(f"Failed to download image #{image.idx} ({image.sized_url()})")
+                return None
+
+            if self.config.is_logged:
+                self._manifest_info["images"][image.img_name] = image.sized_url()
+            return image
+
         try:
-            result = asyncio.run(_async_download_manifest())
+            start = time.time()
+            await asyncio.gather(*(process_image(img) for img in images))
+            elapsed = time.time() - start
+            logger.info(f"Downloaded all images in {elapsed:.2f} seconds.")
+            self.save_log()
         finally:
             if cleanup:
                 self.cleanup()
-        return result
+
+        return self
 
     def cleanup(self):
         self.content = None

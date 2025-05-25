@@ -27,7 +27,7 @@ class IIIFImage:
         pct_size: Optional[float] = None,
         mod_config: Optional[Config] = None,
     ):
- 
+
         self.idx = idx
         self.url = sanitize_url(img_id.replace("full/full/0/default.jpg", ""))
 
@@ -63,7 +63,7 @@ class IIIFImage:
         return get_size(self.resource, "width")
 
     def sized_url(self) -> str:
-        return f"{self.url}/full/{self.size}/0/default.jpg"
+        return f"{self.url}/full/{self.size}/0/default.jpg?download=true"
 
     async def save(self, re_download: bool = False) -> bool:
         """Download and save the image."""
@@ -111,6 +111,7 @@ class IIIFImage:
 
         try:
             await write_chunks(self.img_path, response)
+            # logger.log(f"Downloaded image {self.idx}", msg_type="success")
             return True
         except Exception as e:
             if self.size in ["full", f"{self.max_dim},", f",{self.max_dim}"]:
@@ -121,9 +122,13 @@ class IIIFImage:
 
     def get_pct_size(self) -> str:
         # https://dlg.usg.edu/images/iiif/2/dlg%2Fguan%2F1633%2Fguan_1633_040-017%2Fguan_1633_040-017-00001.jp2/full/pct:35/0/default.jpg
-
-        pct_string = f"pct:{round(self.pct_size * 100)}"
-        return f"{pct_string}"
+        if round(self.pct_size * 100) == 100:
+            return "full"
+        elif self.pct_size is None:
+            return "full"
+        else:
+            pct_string = f"pct:{round(self.pct_size * 100)}"
+            return f"{pct_string}"
 
     def get_max_size(self) -> str:
         # logger.log(f"pct size in get_max_size: {self.pct_size}")
