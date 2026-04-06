@@ -98,7 +98,7 @@ async def async_request(
         else None
     )
 
-    request_headers = {"User-Agent": config.user_agent}
+    request_headers = {"User-Agent": config.user_agent, "Accept": "application/ld+json, application/json, */*"}
     if headers:
         request_headers.update(headers)
 
