@@ -35,8 +35,10 @@ class Config:
         self._sleep_time = {"default": 0.05, "gallica": 12}
         self._semaphore = Semaphore(5)
         self._timeout = 120  # 2 minutes
-        self._user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
-        + "Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+        self._user_agent = (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+        )
         self._proxy_settings = {}
 
         # Dev settings
